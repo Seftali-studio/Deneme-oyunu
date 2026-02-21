@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>3D Savaş Alanı - Gelişmiş Fizik</title>
+    <title>3D Savaş Alanı - Texture ve Kamera</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; }
         #ui { position: absolute; top: 10px; left: 10px; color: white; font-family: sans-serif; pointer-events: none; text-shadow: 2px 2px 4px #000; }
@@ -10,8 +10,8 @@
 </head>
 <body>
     <div id="ui">
-        <h1>Gelişmiş Karakter Kontrolü</h1>
-        <p>W,A,S,D: Yürü | Fare (Sol Tık): Dön | Boşluktan düşersen 2 sn sonra dönersin!</p>
+        <h1>3D Dünya Gelişiyor</h1>
+        <p>Sol Tık + Sürükle: Her yöne bak | W,A,S,D: Yürü</p>
     </div>
 
     <script type="importmap">
@@ -21,90 +21,96 @@
     <script type="module">
         import * as THREE from 'three';
 
-        // --- SAHNE VE KAMERA ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87ceeb); // Gökyüzü
+        scene.background = new THREE.Color(0x87ceeb);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // --- IŞIKLANDIRMA ---
+        // --- ÇİMEN TEXTURE OLUŞTURUCU (KODLA) ---
+        function createGrassTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const context = canvas.getContext('2d');
+            context.fillStyle = '#2d5a27'; // Koyu yeşil zemin
+            context.fillRect(0, 0, 512, 512);
+            
+            for (let i = 0; i < 20000; i++) { // Rastgele çimen çizgileri
+                context.fillStyle = `rgb(20, ${50 + Math.random() * 100}, 20)`;
+                context.fillRect(Math.random() * 512, Math.random() * 512, 2, 5);
+            }
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(20, 20); // Dokuyu tüm zemine yay
+            return texture;
+        }
+
         const light = new THREE.DirectionalLight(0xffffff, 1.2);
         light.position.set(10, 20, 10);
         scene.add(light);
         scene.add(new THREE.AmbientLight(0x606060));
 
-        // --- ÇİMENLİ ZEMİN ---
-        // Basit bir doku oluşturmak için renk paleti kullandım
-        const floorGeo = new THREE.PlaneGeometry(100, 100);
-        const floorMat = new THREE.MeshStandardMaterial({ 
-            color: 0x2d5a27, 
-            roughness: 0.8,
-            metalness: 0.1
-        });
+        // --- ZEMİN ---
+        const floorGeo = new THREE.PlaneGeometry(200, 200);
+        const floorMat = new THREE.MeshStandardMaterial({ map: createGrassTexture() });
         const floor = new THREE.Mesh(floorGeo, floorMat);
         floor.rotation.x = -Math.PI / 2;
         scene.add(floor);
 
-        // --- KARAKTER GRUBU ---
+        // --- KARAKTER ---
         const playerGroup = new THREE.Group();
-        
         const torso = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.3), new THREE.MeshStandardMaterial({color: 0x0066ff}));
         torso.position.y = 1.2;
         playerGroup.add(torso);
-
         const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.35), new THREE.MeshStandardMaterial({color: 0xffdbac}));
         head.position.y = 1.8;
         playerGroup.add(head);
-
-        // Bacaklar (Ayrı parçalar ki hareket ettirelim)
-        const legGeo = new THREE.BoxGeometry(0.25, 0.8, 0.25);
-        const legMat = new THREE.MeshStandardMaterial({color: 0x222222});
         
-        const leftLeg = new THREE.Mesh(legGeo, legMat);
+        const legGeo = new THREE.BoxGeometry(0.25, 0.8, 0.25);
+        const leftLeg = new THREE.Mesh(legGeo, new THREE.MeshStandardMaterial({color: 0x222222}));
         leftLeg.position.set(-0.15, 0.4, 0);
         playerGroup.add(leftLeg);
-        
-        const rightLeg = new THREE.Mesh(legGeo, legMat);
+        const rightLeg = new THREE.Mesh(legGeo, new THREE.MeshStandardMaterial({color: 0x222222}));
         rightLeg.position.set(0.15, 0.4, 0);
         playerGroup.add(rightLeg);
-
         scene.add(playerGroup);
 
-        // --- DEĞİŞKENLER ---
+        // --- HAREKET VE KAMERA DEĞİŞKENLERİ ---
         const keys = {};
-        let velocityY = 0;
-        let isFalling = false;
+        let pitch = 0; // Yukarı-aşağı bakış açısı
+        let yaw = 0;   // Sağ-sol bakış açısı
         let walkTimer = 0;
 
         document.addEventListener('keydown', (e) => keys[e.code] = true);
         document.addEventListener('keyup', (e) => keys[e.code] = false);
 
-        // Fare ile dönme
+        // GELİŞMİŞ KAMERA KONTROLÜ
         document.addEventListener('mousemove', (e) => {
-            if (e.buttons === 1) playerGroup.rotation.y -= e.movementX * 0.005;
+            if (e.buttons === 1) { // Sol tık basılıyken
+                yaw -= e.movementX * 0.005;
+                pitch -= e.movementY * 0.005;
+                
+                // Yukarı-aşağı bakışa sınır koy (Kamera takla atmasın)
+                pitch = Math.max(-Math.PI / 4, Math.min(Math.PI / 8, pitch));
+            }
         });
 
-        function resetPlayer() {
-            playerGroup.position.set(0, 0, 0);
-            velocityY = 0;
-            isFalling = false;
-        }
-
         function update() {
-            const speed = 0.12;
+            const speed = 0.15;
             let moving = false;
 
-            // Hareket Kontrolü
+            playerGroup.rotation.y = yaw;
+
             if (keys['KeyW']) { playerGroup.translateZ(-speed); moving = true; }
             if (keys['KeyS']) { playerGroup.translateZ(speed); moving = true; }
             if (keys['KeyA']) { playerGroup.translateX(-speed); moving = true; }
             if (keys['KeyD']) { playerGroup.translateX(speed); moving = true; }
 
-            // Ayak Animasyonu
             if (moving) {
-                walkTimer += 0.15;
+                walkTimer += 0.2;
                 leftLeg.rotation.x = Math.sin(walkTimer) * 0.5;
                 rightLeg.rotation.x = Math.sin(walkTimer + Math.PI) * 0.5;
             } else {
@@ -112,29 +118,14 @@
                 rightLeg.rotation.x = 0;
             }
 
-            // Boşluk Kontrolü ve Düşme
-            const x = playerGroup.position.x;
-            const z = playerGroup.position.z;
-            
-            // Eğer harita sınırları dışındaysa (50 birim merkezden)
-            if (Math.abs(x) > 50 || Math.abs(z) > 50) {
-                isFalling = true;
-            }
+            // KAMERA KONUMLANDIRMA (3. Şahıs)
+            const cameraDistance = 6;
+            const camX = playerGroup.position.x + Math.sin(yaw) * Math.cos(pitch) * cameraDistance;
+            const camY = playerGroup.position.y + 3 + Math.sin(pitch) * cameraDistance;
+            const camZ = playerGroup.position.z + Math.cos(yaw) * Math.cos(pitch) * cameraDistance;
 
-            if (isFalling) {
-                velocityY -= 0.01; // Yerçekimi
-                playerGroup.position.y += velocityY;
-                
-                // Çok derine düşerse sıfırla
-                if (playerGroup.position.y < -20) {
-                    resetPlayer();
-                }
-            }
-
-            // Kamera Takibi
-            const cameraOffset = new THREE.Vector3(0, 3, 6).applyMatrix4(playerGroup.matrixWorld);
-            camera.position.lerp(cameraOffset, 0.1);
-            camera.lookAt(playerGroup.position.x, playerGroup.position.y + 1, playerGroup.position.z);
+            camera.position.set(camX, camY, camZ);
+            camera.lookAt(playerGroup.position.x, playerGroup.position.y + 1.2, playerGroup.position.z);
         }
 
         function animate() {
