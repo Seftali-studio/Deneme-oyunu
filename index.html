@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>3D Savaş Alanı - Texture ve Kamera</title>
+    <title>3D Savaş Alanı - Fizik ve Düşüş</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; }
         #ui { position: absolute; top: 10px; left: 10px; color: white; font-family: sans-serif; pointer-events: none; text-shadow: 2px 2px 4px #000; }
@@ -10,8 +10,8 @@
 </head>
 <body>
     <div id="ui">
-        <h1>3D Dünya Gelişiyor</h1>
-        <p>Sol Tık + Sürükle: Her yöne bak | W,A,S,D: Yürü</p>
+        <h1>Savaş Alanı Gelişiyor</h1>
+        <p>Hız dengelendi | Kenardan düşersen otomatik başa dönersin</p>
     </div>
 
     <script type="importmap">
@@ -28,23 +28,20 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // --- ÇİMEN TEXTURE OLUŞTURUCU (KODLA) ---
+        // --- ÇİMEN TEXTURE ---
         function createGrassTexture() {
             const canvas = document.createElement('canvas');
-            canvas.width = 512;
-            canvas.height = 512;
-            const context = canvas.getContext('2d');
-            context.fillStyle = '#2d5a27'; // Koyu yeşil zemin
-            context.fillRect(0, 0, 512, 512);
-            
-            for (let i = 0; i < 20000; i++) { // Rastgele çimen çizgileri
-                context.fillStyle = `rgb(20, ${50 + Math.random() * 100}, 20)`;
-                context.fillRect(Math.random() * 512, Math.random() * 512, 2, 5);
+            canvas.width = 512; canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#1a3c15'; 
+            ctx.fillRect(0, 0, 512, 512);
+            for (let i = 0; i < 15000; i++) {
+                ctx.fillStyle = `rgb(10, ${60 + Math.random() * 80}, 10)`;
+                ctx.fillRect(Math.random() * 512, Math.random() * 512, 2, 4);
             }
             const texture = new THREE.CanvasTexture(canvas);
-            texture.wrapS = THREE.RepeatWrapping;
-            texture.wrapT = THREE.RepeatWrapping;
-            texture.repeat.set(20, 20); // Dokuyu tüm zemine yay
+            texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(25, 25);
             return texture;
         }
 
@@ -53,8 +50,9 @@
         scene.add(light);
         scene.add(new THREE.AmbientLight(0x606060));
 
-        // --- ZEMİN ---
-        const floorGeo = new THREE.PlaneGeometry(200, 200);
+        // --- ZEMİN (100x100 Birim) ---
+        const mapSize = 100;
+        const floorGeo = new THREE.PlaneGeometry(mapSize, mapSize);
         const floorMat = new THREE.MeshStandardMaterial({ map: createGrassTexture() });
         const floor = new THREE.Mesh(floorGeo, floorMat);
         floor.rotation.x = -Math.PI / 2;
@@ -62,9 +60,9 @@
 
         // --- KARAKTER ---
         const playerGroup = new THREE.Group();
-        const torso = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.3), new THREE.MeshStandardMaterial({color: 0x0066ff}));
-        torso.position.y = 1.2;
-        playerGroup.add(torso);
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.3), new THREE.MeshStandardMaterial({color: 0x0066ff}));
+        body.position.y = 1.2;
+        playerGroup.add(body);
         const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.35), new THREE.MeshStandardMaterial({color: 0xffdbac}));
         head.position.y = 1.8;
         playerGroup.add(head);
@@ -78,53 +76,70 @@
         playerGroup.add(rightLeg);
         scene.add(playerGroup);
 
-        // --- HAREKET VE KAMERA DEĞİŞKENLERİ ---
+        // --- DEĞİŞKENLER ---
         const keys = {};
-        let pitch = 0; // Yukarı-aşağı bakış açısı
-        let yaw = 0;   // Sağ-sol bakış açısı
+        let pitch = 0, yaw = 0;
         let walkTimer = 0;
+        let velocityY = 0;
+        const gravity = 0.015;
 
         document.addEventListener('keydown', (e) => keys[e.code] = true);
         document.addEventListener('keyup', (e) => keys[e.code] = false);
-
-        // GELİŞMİŞ KAMERA KONTROLÜ
         document.addEventListener('mousemove', (e) => {
-            if (e.buttons === 1) { // Sol tık basılıyken
+            if (e.buttons === 1) {
                 yaw -= e.movementX * 0.005;
                 pitch -= e.movementY * 0.005;
-                
-                // Yukarı-aşağı bakışa sınır koy (Kamera takla atmasın)
-                pitch = Math.max(-Math.PI / 4, Math.min(Math.PI / 8, pitch));
+                pitch = Math.max(-Math.PI / 3, Math.min(Math.PI / 8, pitch));
             }
         });
 
         function update() {
-            const speed = 0.15;
+            const speed = 0.1; // Hız düşürüldü
             let moving = false;
 
             playerGroup.rotation.y = yaw;
 
-            if (keys['KeyW']) { playerGroup.translateZ(-speed); moving = true; }
-            if (keys['KeyS']) { playerGroup.translateZ(speed); moving = true; }
-            if (keys['KeyA']) { playerGroup.translateX(-speed); moving = true; }
-            if (keys['KeyD']) { playerGroup.translateX(speed); moving = true; }
+            // Zemin Kontrolü
+            const halfSize = mapSize / 2;
+            const isInsideMap = Math.abs(playerGroup.position.x) < halfSize && Math.abs(playerGroup.position.z) < halfSize;
 
+            if (isInsideMap && playerGroup.position.y <= 0) {
+                // Zemindeyiz
+                playerGroup.position.y = 0;
+                velocityY = 0;
+                
+                if (keys['KeyW']) { playerGroup.translateZ(-speed); moving = true; }
+                if (keys['KeyS']) { playerGroup.translateZ(speed); moving = true; }
+                if (keys['KeyA']) { playerGroup.translateX(-speed); moving = true; }
+                if (keys['KeyD']) { playerGroup.translateX(speed); moving = true; }
+            } else {
+                // Boşluktayız
+                velocityY -= gravity;
+                playerGroup.position.y += velocityY;
+            }
+
+            // Yeniden Doğma (Respawn)
+            if (playerGroup.position.y < -30) {
+                playerGroup.position.set(0, 5, 0); // Havadan doğsun ki düşüşü gör
+                velocityY = 0;
+            }
+
+            // Animasyon
             if (moving) {
-                walkTimer += 0.2;
+                walkTimer += 0.12;
                 leftLeg.rotation.x = Math.sin(walkTimer) * 0.5;
                 rightLeg.rotation.x = Math.sin(walkTimer + Math.PI) * 0.5;
             } else {
-                leftLeg.rotation.x = 0;
-                rightLeg.rotation.x = 0;
+                leftLeg.rotation.x = 0; rightLeg.rotation.x = 0;
             }
 
-            // KAMERA KONUMLANDIRMA (3. Şahıs)
-            const cameraDistance = 6;
-            const camX = playerGroup.position.x + Math.sin(yaw) * Math.cos(pitch) * cameraDistance;
-            const camY = playerGroup.position.y + 3 + Math.sin(pitch) * cameraDistance;
-            const camZ = playerGroup.position.z + Math.cos(yaw) * Math.cos(pitch) * cameraDistance;
-
-            camera.position.set(camX, camY, camZ);
+            // Kamera
+            const camDist = 7;
+            camera.position.set(
+                playerGroup.position.x + Math.sin(yaw) * Math.cos(pitch) * camDist,
+                playerGroup.position.y + 3.5 + Math.sin(pitch) * camDist,
+                playerGroup.position.z + Math.cos(yaw) * Math.cos(pitch) * camDist
+            );
             camera.lookAt(playerGroup.position.x, playerGroup.position.y + 1.2, playerGroup.position.z);
         }
 
