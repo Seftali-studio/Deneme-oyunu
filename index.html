@@ -4,26 +4,54 @@
     <meta charset="UTF-8">
     <title>3D deneme oyunu</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #111; font-family: sans-serif; }
-        #ui-layer {
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; }
+        
+        /* FULLSCREEN UI */
+        #ui-wrapper {
             position: absolute; width: 100%; height: 100%; z-index: 100;
-            display: flex; justify-content: center; align-items: center;
-            background: rgba(0,0,0,0.85);
+            display: flex; flex-direction: column; justify-content: space-between;
+            padding: 40px; box-sizing: border-box;
+            pointer-events: none; /* Arkadaki karakteri görmek için */
         }
-        .menu-box { 
-            background: #222; padding: 40px; border-radius: 20px; 
-            border: 3px solid #ffcc00; text-align: center; color: white; min-width: 350px;
-            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+
+        .clickable { pointer-events: auto; }
+
+        /* SAĞ ÜST: AYARLAR */
+        .top-right { align-self: flex-end; }
+        
+        /* SAĞ ORTA: KARAKTER SEÇİMİ */
+        .mid-right { 
+            position: absolute; right: 40px; top: 50%; transform: translateY(-50%);
+            display: flex; flex-direction: column; gap: 15px;
         }
+
+        /* SOL ALT: BAŞLAT */
+        .bottom-left { align-self: flex-start; }
+
+        h1 { color: white; text-shadow: 2px 2px 10px rgba(0,0,0,0.5); margin: 0; font-size: 48px; }
+        
         button { 
-            padding: 15px; margin: 8px; width: 100%; font-size: 16px; font-weight: bold; 
-            cursor: pointer; border-radius: 8px; border: none; transition: 0.2s;
+            padding: 15px 30px; font-size: 18px; font-weight: bold; cursor: pointer; 
+            border-radius: 12px; border: 2px solid rgba(255,255,255,0.2); 
+            transition: 0.3s; background: rgba(0,0,0,0.6); color: white;
         }
-        .btn-main { background: #ffcc00; color: #000; }
-        .btn-side { background: #444; color: white; }
-        button:hover { transform: scale(1.03); filter: brightness(1.2); }
+        
+        button:hover { background: #ffcc00; color: #000; transform: scale(1.05); }
+
+        #start-btn { 
+            background: #ffcc00; color: #000; font-size: 32px; padding: 25px 60px;
+            box-shadow: 0 10px 30px rgba(255,204,0,0.3); border: none;
+        }
+
+        /* PAUSE MENU (ESC) */
+        #pause-overlay {
+            display: none; position: absolute; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 200;
+            justify-content: center; align-items: center; flex-direction: column;
+        }
+
         #crosshair { 
-            position: absolute; top: 50%; left: 50%; width: 10px; height: 10px; 
+            position: absolute; top: 50%; left: 50%; width: 20px; height: 20px; 
             border: 2px solid white; border-radius: 50%; transform: translate(-50%, -50%);
             display: none; pointer-events: none; z-index: 50;
         }
@@ -31,30 +59,27 @@
 </head>
 <body>
 
-    <div id="ui-layer">
-        <div class="menu-box">
-            <h1 id="txt-title">3D DENEME OYUNU</h1>
-            
-            <div id="area-main">
-                <p id="txt-select">Karakter Seç</p>
-                <div style="display:flex; gap:5px;">
-                    <button class="btn-side" onclick="selectChar('blue')">Mavi Karakter</button>
-                    <button class="btn-side" onclick="selectChar('red')">Kırmızı Karakter</button>
-                </div>
-                <button class="btn-main" id="txt-start" onclick="startGame()">MAÇA BAŞLA</button>
-                <div style="margin-top:10px; border-top: 1px solid #444; padding-top:10px;">
-                    <button class="btn-side" style="width:45%" onclick="setLang('tr')">Türkçe</button>
-                    <button class="btn-side" style="width:45%" onclick="setLang('en')">English</button>
-                </div>
-            </div>
-
-            <div id="area-pause" style="display:none;">
-                <button class="btn-main" id="txt-resume" onclick="startGame()">DEVAM ET</button>
-                <button class="btn-side" onclick="setLang('tr')">Türkçe</button>
-                <button class="btn-side" onclick="setLang('en')">English</button>
-                <button class="btn-side" style="background:#800" onclick="location.reload()">MENÜYE DÖN</button>
-            </div>
+    <div id="ui-wrapper">
+        <div class="top-right clickable">
+            <button onclick="toggleLang()">TR / EN</button>
         </div>
+
+        <div class="bottom-left clickable">
+            <h1 id="main-title">3D DENEME OYUNU</h1>
+            <button id="start-btn" onclick="startGame()">MAÇA BAŞLA</button>
+        </div>
+
+        <div class="mid-right clickable">
+            <p style="color:white; font-weight:bold; margin-bottom:5px;" id="char-text">Karakter Seç</p>
+            <button style="border-left: 8px solid #0066ff" onclick="selectChar('blue')">Mavi Karakter</button>
+            <button style="border-left: 8px solid #ff3300" onclick="selectChar('red')">Kırmızı Karakter</button>
+        </div>
+    </div>
+
+    <div id="pause-overlay">
+        <h2 style="color:white; font-size:40px;" id="pause-title">OYUN DURDURULDU</h2>
+        <button class="clickable" onclick="startGame()" style="width:300px; margin-bottom:10px;">DEVAM ET</button>
+        <button class="clickable" onclick="location.reload()" style="width:300px; background:#aa0000">ANA MENÜ</button>
     </div>
 
     <div id="crosshair"></div>
@@ -68,12 +93,14 @@
 
         let gameStarted = false;
         let isPaused = true;
-        let lang = 'tr';
+        let currentLang = 'tr';
+
         const texts = {
-            tr: { title: "3D DENEME OYUNU", start: "MAÇA BAŞLA", select: "Karakter Seç", resume: "DEVAM ET" },
-            en: { title: "3D TRIAL GAME", start: "START MATCH", select: "Select Hero", resume: "CONTINUE" }
+            tr: { title: "3D DENEME OYUNU", start: "MAÇA BAŞLA", char: "Karakter Seç", pause: "OYUN DURDURULDU" },
+            en: { title: "3D TRIAL GAME", start: "START MATCH", char: "Select Hero", pause: "GAME PAUSED" }
         };
 
+        // --- SAHNE KURULUMU ---
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87ceeb);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -81,138 +108,136 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // IŞIKLAR
+        // --- IŞIKLANDIRMA ---
         const sun = new THREE.DirectionalLight(0xffffff, 1.5);
-        sun.position.set(5, 15, 10);
+        sun.position.set(10, 20, 10);
         scene.add(sun);
         scene.add(new THREE.AmbientLight(0x707070));
 
-        // ZEMİN (Doku garantili)
-        const floorGeo = new THREE.PlaneGeometry(100, 100);
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x2d5a27 }); // Düz yeşil (önlem)
-        const floor = new THREE.Mesh(floorGeo, floorMat);
-        floor.rotation.x = -Math.PI / 2;
-        scene.add(floor);
-
-        // DOKU EKLEME (Opsiyonel, hata verirse sistemi bozmaz)
-        try {
+        // --- ÇİMEN TEXTURE (GELİŞMİŞ) ---
+        function createGrass() {
             const canvas = document.createElement('canvas');
-            canvas.width = 128; canvas.height = 128;
+            canvas.width = 512; canvas.height = 512;
             const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#1a3c15'; ctx.fillRect(0,0,128,128);
-            for(let i=0; i<500; i++){
-                ctx.fillStyle = '#2d5a27'; ctx.fillRect(Math.random()*128, Math.random()*128, 2, 2);
+            ctx.fillStyle = '#1a3c15'; ctx.fillRect(0,0,512,512);
+            for(let i=0; i<20000; i++) {
+                ctx.fillStyle = `rgb(10, ${70 + Math.random() * 90}, 10)`;
+                ctx.fillRect(Math.random()*512, Math.random()*512, 2, 4);
             }
             const tex = new THREE.CanvasTexture(canvas);
             tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-            tex.repeat.set(20,20);
-            floorMat.map = tex;
-        } catch(e) { console.log("Doku yüklenemedi, düz renk devam ediyor."); }
-
-        // KARAKTER
-        function createModel(colorCode) {
-            const group = new THREE.Group();
-            const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.3), new THREE.MeshStandardMaterial({color: colorCode}));
-            body.position.y = 1.35; group.add(body);
-            const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.35), new THREE.MeshStandardMaterial({color: 0xffdbac}));
-            head.position.y = 2.05; group.add(head);
-            const leg = new THREE.BoxGeometry(0.25, 0.8, 0.25);
-            const lLeg = new THREE.Mesh(leg, new THREE.MeshStandardMaterial({color: 0x222222}));
-            lLeg.position.set(-0.15, 0.4, 0); group.add(lLeg);
-            const rLeg = new THREE.Mesh(leg, new THREE.MeshStandardMaterial({color: 0x222222}));
-            rLeg.position.set(0.15, 0.4, 0); group.add(rLeg);
-            group.userData = { lLeg, rLeg };
-            return group;
+            tex.repeat.set(25, 25);
+            return tex;
         }
 
-        let player = createModel(0x0066ff);
-        scene.add(player);
+        const floor = new THREE.Mesh(
+            new THREE.PlaneGeometry(100, 100),
+            new THREE.MeshStandardMaterial({ map: createGrass() })
+        );
+        floor.rotation.x = -Math.PI / 2;
+        scene.add(floor);
 
-        // --- BUTON FONKSİYONLARI ---
-        window.setLang = (l) => {
-            lang = l;
-            document.getElementById('txt-title').innerText = texts[l].title;
-            document.getElementById('txt-start').innerText = texts[l].start;
-            document.getElementById('txt-select').innerText = texts[l].select;
-            document.getElementById('txt-resume').innerText = texts[l].resume;
+        // --- KARAKTER ---
+        const playerGroup = new THREE.Group();
+        const bodyMat = new THREE.MeshStandardMaterial({color: 0x0066ff});
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.3), bodyMat);
+        body.position.y = 1.35; playerGroup.add(body);
+        
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.35), new THREE.MeshStandardMaterial({color: 0xffdbac}));
+        head.position.y = 2.05; playerGroup.add(head);
+        
+        const legGeo = new THREE.BoxGeometry(0.25, 0.8, 0.25);
+        const legMat = new THREE.MeshStandardMaterial({color: 0x222222});
+        const lLeg = new THREE.Mesh(legGeo, legMat); lLeg.position.set(-0.15, 0.4, 0); playerGroup.add(lLeg);
+        const rLeg = new THREE.Mesh(legGeo, legMat); rLeg.position.set(0.15, 0.4, 0); playerGroup.add(rLeg);
+        
+        scene.add(playerGroup);
+
+        // --- UI KONTROLLERİ ---
+        window.toggleLang = () => {
+            currentLang = currentLang === 'tr' ? 'en' : 'tr';
+            document.getElementById('main-title').innerText = texts[currentLang].title;
+            document.getElementById('start-btn').innerText = texts[currentLang].start;
+            document.getElementById('char-text').innerText = texts[currentLang].char;
+            document.getElementById('pause-title').innerText = texts[currentLang].pause;
         };
 
-        window.selectChar = (c) => {
-            player.children[0].material.color.set(c === 'blue' ? 0x0066ff : 0xff3300);
+        window.selectChar = (color) => {
+            bodyMat.color.set(color === 'blue' ? 0x0066ff : 0xff3300);
         };
 
         window.startGame = () => {
-            isPaused = false;
-            gameStarted = true;
-            document.getElementById('ui-layer').style.display = 'none';
+            isPaused = false; gameStarted = true;
+            document.getElementById('ui-wrapper').style.display = 'none';
+            document.getElementById('pause-overlay').style.display = 'none';
             document.getElementById('crosshair').style.display = 'block';
         };
 
+        // --- OYUN DÖNGÜSÜ VE FİZİK ---
         const keys = {};
+        let yaw = 0, pitch = 0, vY = 0, walkTimer = 0;
+
         window.addEventListener('keydown', (e) => {
             if(e.code === 'Escape' && gameStarted) {
                 isPaused = true;
-                document.getElementById('ui-layer').style.display = 'flex';
-                document.getElementById('area-main').style.display = 'none';
-                document.getElementById('area-pause').style.display = 'block';
+                document.getElementById('pause-overlay').style.display = 'flex';
                 document.getElementById('crosshair').style.display = 'none';
             }
             keys[e.code] = true;
         });
         window.addEventListener('keyup', (e) => keys[e.code] = false);
 
-        let yaw = 0, pitch = 0, vY = 0, walk = 0;
         document.addEventListener('mousemove', (e) => {
-            if(!isPaused && (e.buttons === 1 || document.pointerLockElement)) {
+            if(!isPaused && e.buttons === 1) {
                 yaw -= e.movementX * 0.005;
-                pitch = Math.max(-0.6, Math.min(0.2, pitch - e.movementY * 0.005));
+                pitch = Math.max(-Math.PI/3, Math.min(Math.PI/8, pitch - e.movementY * 0.005));
             }
         });
 
         function update() {
             if (isPaused) {
-                player.rotation.y += 0.01;
-                camera.position.set(Math.sin(Date.now()*0.001)*2, 2.5, 6);
-                camera.lookAt(0, 1.5, 0);
+                // Menüde karakteri sergile
+                playerGroup.position.set(0, 0, 0);
+                playerGroup.rotation.y += 0.01;
+                camera.position.set(0, 2, 5);
+                camera.lookAt(0, 1.4, 0);
             } else {
-                player.rotation.y = yaw;
-                let move = false;
-                const dist = 50;
-                const inside = Math.abs(player.position.x) < dist && Math.abs(player.position.z) < dist;
+                playerGroup.rotation.y = yaw;
+                let moving = false;
+                const inside = Math.abs(playerGroup.position.x) < 50 && Math.abs(playerGroup.position.z) < 50;
 
-                if (inside && player.position.y <= 0) {
-                    player.position.y = 0; vY = 0;
-                    if(keys['KeyW']) { player.translateZ(-0.12); move = true; }
-                    if(keys['KeyS']) { player.translateZ(0.12); move = true; }
-                    if(keys['KeyA']) { player.translateX(-0.12); move = true; }
-                    if(keys['KeyD']) { player.translateX(0.12); move = true; }
+                if (inside && playerGroup.position.y <= 0) {
+                    playerGroup.position.y = 0; vY = 0;
+                    if(keys['KeyW']) { playerGroup.translateZ(-0.12); moving = true; }
+                    if(keys['KeyS']) { playerGroup.translateZ(0.12); moving = true; }
+                    if(keys['KeyA']) { playerGroup.translateX(-0.12); moving = true; }
+                    if(keys['KeyD']) { playerGroup.translateX(0.12); moving = true; }
                 } else {
                     vY -= 0.015;
-                    player.position.y += vY;
-                    if(player.position.y < -30) { player.position.set(0,5,0); vY = 0; }
+                    playerGroup.position.y += vY;
+                    if(playerGroup.position.y < -30) { playerGroup.position.set(0, 5, 0); vY = 0; }
                 }
 
-                if(move) {
-                    walk += 0.15;
-                    player.userData.lLeg.rotation.x = Math.sin(walk)*0.5;
-                    player.userData.rLeg.rotation.x = Math.sin(walk+Math.PI)*0.5;
-                } else {
-                    player.userData.lLeg.rotation.x = player.userData.rLeg.rotation.x = 0;
-                }
+                // Yürüme Animasyonu
+                if(moving) {
+                    walkTimer += 0.15;
+                    lLeg.rotation.x = Math.sin(walkTimer) * 0.5;
+                    rLeg.rotation.x = Math.sin(walkTimer + Math.PI) * 0.5;
+                } else { lLeg.rotation.x = rLeg.rotation.x = 0; }
 
                 const d = 7;
                 camera.position.set(
-                    player.position.x + Math.sin(yaw)*Math.cos(pitch)*d,
-                    player.position.y + 3.5 + Math.sin(pitch)*d,
-                    player.position.z + Math.cos(yaw)*Math.cos(pitch)*d
+                    playerGroup.position.x + Math.sin(yaw)*Math.cos(pitch)*d,
+                    playerGroup.position.y + 3.5 + Math.sin(pitch)*d,
+                    playerGroup.position.z + Math.cos(yaw)*Math.cos(pitch)*d
                 );
-                camera.lookAt(player.position.x, player.position.y + 1.5, player.position.z);
+                camera.lookAt(playerGroup.position.x, playerGroup.position.y + 1.5, playerGroup.position.z);
             }
         }
 
         function animate() { requestAnimationFrame(animate); update(); renderer.render(scene, camera); }
         animate();
-        
+
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
