@@ -2,90 +2,82 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>İlk Oyunum - GitHub</title>
+    <title>3D Savaş Alanı - İlk Adım</title>
     <style>
-        body { background-color: #222; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        canvas { background: #eee; border: 5px solid #0095DD; display: block; }
+        body { margin: 0; overflow: hidden; background-color: #000; }
+        canvas { display: block; }
+        #ui { position: absolute; top: 10px; left: 10px; color: white; font-family: sans-serif; pointer-events: none; }
     </style>
 </head>
 <body>
+    <div id="ui">
+        <h1>3D Savaş Alanı</h1>
+        <p>Hareket: Yakında eklenecek | Görüş: Mouse</p>
+    </div>
 
-<canvas id="gameCanvas" width="480" height="320"></canvas>
-
-<script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-
-    // Top ayarları
-    let x = canvas.width / 2;
-    let y = canvas.height - 30;
-    let dx = 2;
-    let dy = -2;
-    const ballRadius = 10;
-
-    // Raket ayarları
-    const paddleHeight = 10;
-    const paddleWidth = 75;
-    let paddleX = (canvas.width - paddleWidth) / 2;
-
-    // Fare hareketini dinle
-    document.addEventListener("mousemove", mouseMoveHandler, false);
-
-    function mouseMoveHandler(e) {
-        const relativeX = e.clientX - canvas.offsetLeft;
-        if(relativeX > 0 && relativeX < canvas.width) {
-            paddleX = relativeX - paddleWidth / 2;
-        }
-    }
-
-    function drawBall() {
-        ctx.beginPath();
-        ctx.arc(x, y, ballRadius, 0, Math.PI*2);
-        ctx.fillStyle = "#0095DD";
-        ctx.fill();
-        ctx.closePath();
-    }
-
-    function drawPaddle() {
-        ctx.beginPath();
-        ctx.rect(paddleX, canvas.height - paddleHeight, paddleWidth, paddleHeight);
-        ctx.fillStyle = "#0095DD";
-        ctx.fill();
-        ctx.closePath();
-    }
-
-    function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawBall();
-        drawPaddle();
-
-        // Kenarlara çarpma kontrolü
-        if(x + dx > canvas.width - ballRadius || x + dx < ballRadius) {
-            dx = -dx;
-        }
-        if(y + dy < ballRadius) {
-            dy = -dy;
-        } else if(y + dy > canvas.height - ballRadius) {
-            // Rakete çarptı mı?
-            if(x > paddleX && x < paddleX + paddleWidth) {
-                dy = -dy;
-                // Her vuruşta biraz hızlandıralım
-                dx *= 1.1; 
-                dy *= 1.1;
-            }
-            else {
-                alert("OYUN BİTTİ! Sayfayı yenileyerek tekrar dene.");
-                document.location.reload();
-                clearInterval(interval);
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
             }
         }
+    </script>
 
-        x += dx;
-        y += dy;
-    }
+    <script type="module">
+        import * as THREE from 'three';
 
-    const interval = setInterval(draw, 10);
-</script>
+        // 1. SAHNE (Dünyanın kendisi)
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87ceeb); // Gökyüzü mavisi
 
+        // 2. KAMERA (Bizim gözümüz)
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 1.6, 5); // İnsan boyu yüksekliği (1.6m)
+
+        // 3. RENDERER (Görüntüyü çizen motor)
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // 4. IŞIK (Güneş olmazsa göremeyiz)
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 10, 7.5);
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x404040)); // Genel aydınlık
+
+        // 5. ZEMİN (PUBG Adası'nın ilk metrekaresi)
+        const floorGeometry = new THREE.PlaneGeometry(100, 100);
+        const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x228b22 }); // Çimen yeşili
+        const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+        floor.rotation.x = -Math.PI / 2; // Yatay yap
+        scene.add(floor);
+
+        // 6. KARAKTERİMİZ (Şimdilik bir küp, yakında asker olacak!)
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const material = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+        const playerBox = new THREE.Mesh(geometry, material);
+        playerBox.position.y = 0.5; // Zeminin üstünde dursun
+        scene.add(playerBox);
+
+        // ANİMASYON DÖNGÜSÜ
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Küpü yavaşça döndürelim (Canlı olduğunu anlayalım)
+            playerBox.rotation.y += 0.01;
+
+            renderer.render(scene, camera);
+        }
+
+        // Pencere boyutu değişirse oyunu ayarla
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
 </body>
 </html>
