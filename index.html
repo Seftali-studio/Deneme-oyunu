@@ -4,14 +4,69 @@
     <meta charset="UTF-8">
     <title>3D deneme oyunu</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; }
-        #ui { position: absolute; top: 10px; left: 10px; color: white; font-family: sans-serif; pointer-events: none; text-shadow: 2px 2px 4px #000; }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        /* ANA MENÜ TASARIMI */
+        #main-menu {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            background: radial-gradient(circle, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 100%);
+        }
+
+        .menu-top { display: flex; justify-content: space-between; padding: 20px; }
+        .menu-bottom { display: flex; justify-content: center; padding: 50px; }
+        
+        button {
+            padding: 15px 30px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            border-radius: 10px;
+            transition: 0.3s;
+            text-transform: uppercase;
+        }
+
+        #start-btn { background-color: #ffcc00; color: #333; font-size: 32px; padding: 20px 60px; box-shadow: 0 5px 15px rgba(255,204,0,0.4); }
+        #start-btn:hover { transform: scale(1.1); background-color: #ffe066; }
+
+        .side-btn { background-color: rgba(255,255,255,0.2); color: white; margin: 5px; }
+        .side-btn:hover { background-color: rgba(255,255,255,0.4); }
+
+        .char-selector { position: absolute; left: 50px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; }
+
+        #ui-game { position: absolute; top: 10px; left: 10px; color: white; display: none; pointer-events: none; }
     </style>
 </head>
 <body>
-    <div id="ui">
-        <h1>Savaş Alanı Gelişiyor</h1>
-        <p>Hız dengelendi | Kenardan düşersen otomatik başa dönersin</p>
+
+    <div id="main-menu">
+        <div class="menu-top">
+            <div id="settings-area">
+                <button class="side-btn" onclick="toggleLang()">TR / EN</button>
+                <button class="side-btn" id="sett-btn">Ayarlar</button>
+            </div>
+            <h2 style="color: white; margin: 0;" id="game-title">3D DENEME OYUNU</h2>
+        </div>
+
+        <div class="char-selector">
+            <h3 style="color: white;" id="select-text">Karakter Seç</h3>
+            <button class="side-btn" onclick="selectChar('blue')">Mavi Savaşçı</button>
+            <button class="side-btn" onclick="selectChar('red')">Kırmızı Savaşçı</button>
+        </div>
+
+        <div class="menu-bottom">
+            <button id="start-btn" onclick="startGame()">MAÇA BAŞLA</button>
+        </div>
+    </div>
+
+    <div id="ui-game">
+        <p id="ingame-text">W,A,S,D ile hareket et!</p>
     </div>
 
     <script type="importmap">
@@ -21,6 +76,13 @@
     <script type="module">
         import * as THREE from 'three';
 
+        let gameStarted = false;
+        let currentLang = 'tr';
+        const langData = {
+            tr: { start: "MAÇA BAŞLA", select: "Karakter Seç", settings: "Ayarlar", ingame: "W,A,S,D ile hareket et!", title: "3D DENEME OYUNU" },
+            en: { start: "START MATCH", select: "Select Character", settings: "Settings", ingame: "Use W,A,S,D to move!", title: "3D TRIAL GAME" }
+        };
+
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87ceeb);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -28,37 +90,19 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // --- ÇİMEN TEXTURE ---
-        function createGrassTexture() {
-            const canvas = document.createElement('canvas');
-            canvas.width = 512; canvas.height = 512;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#1a3c15'; 
-            ctx.fillRect(0, 0, 512, 512);
-            for (let i = 0; i < 15000; i++) {
-                ctx.fillStyle = `rgb(10, ${60 + Math.random() * 80}, 10)`;
-                ctx.fillRect(Math.random() * 512, Math.random() * 512, 2, 4);
-            }
-            const texture = new THREE.CanvasTexture(canvas);
-            texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-            texture.repeat.set(25, 25);
-            return texture;
-        }
-
         const light = new THREE.DirectionalLight(0xffffff, 1.2);
         light.position.set(10, 20, 10);
         scene.add(light);
         scene.add(new THREE.AmbientLight(0x606060));
 
-        // --- ZEMİN (100x100 Birim) ---
-        const mapSize = 100;
-        const floorGeo = new THREE.PlaneGeometry(mapSize, mapSize);
-        const floorMat = new THREE.MeshStandardMaterial({ map: createGrassTexture() });
+        // ZEMİN
+        const floorGeo = new THREE.PlaneGeometry(100, 100);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x2d5a27 });
         const floor = new THREE.Mesh(floorGeo, floorMat);
         floor.rotation.x = -Math.PI / 2;
         scene.add(floor);
 
-        // --- KARAKTER ---
+        // KARAKTER GRUBU
         const playerGroup = new THREE.Group();
         const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.3), new THREE.MeshStandardMaterial({color: 0x0066ff}));
         body.position.y = 1.2;
@@ -66,7 +110,6 @@
         const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.35), new THREE.MeshStandardMaterial({color: 0xffdbac}));
         head.position.y = 1.8;
         playerGroup.add(head);
-        
         const legGeo = new THREE.BoxGeometry(0.25, 0.8, 0.25);
         const leftLeg = new THREE.Mesh(legGeo, new THREE.MeshStandardMaterial({color: 0x222222}));
         leftLeg.position.set(-0.15, 0.4, 0);
@@ -76,17 +119,33 @@
         playerGroup.add(rightLeg);
         scene.add(playerGroup);
 
-        // --- DEĞİŞKENLER ---
+        // KONTROLLER
         const keys = {};
-        let pitch = 0, yaw = 0;
-        let walkTimer = 0;
-        let velocityY = 0;
-        const gravity = 0.015;
+        let pitch = 0, yaw = 0, walkTimer = 0;
+
+        window.toggleLang = () => {
+            currentLang = currentLang === 'tr' ? 'en' : 'tr';
+            document.getElementById('start-btn').innerText = langData[currentLang].start;
+            document.getElementById('select-text').innerText = langData[currentLang].select;
+            document.getElementById('sett-btn').innerText = langData[currentLang].settings;
+            document.getElementById('ingame-text').innerText = langData[currentLang].ingame;
+            document.getElementById('game-title').innerText = langData[currentLang].title;
+        };
+
+        window.selectChar = (color) => {
+            body.material.color.set(color === 'blue' ? 0x0066ff : 0xff3300);
+        };
+
+        window.startGame = () => {
+            gameStarted = true;
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('ui-game').style.display = 'block';
+        };
 
         document.addEventListener('keydown', (e) => keys[e.code] = true);
         document.addEventListener('keyup', (e) => keys[e.code] = false);
         document.addEventListener('mousemove', (e) => {
-            if (e.buttons === 1) {
+            if (gameStarted && e.buttons === 1) {
                 yaw -= e.movementX * 0.005;
                 pitch -= e.movementY * 0.005;
                 pitch = Math.max(-Math.PI / 3, Math.min(Math.PI / 8, pitch));
@@ -94,37 +153,22 @@
         });
 
         function update() {
-            const speed = 0.1; // Hız düşürüldü
-            let moving = false;
+            if (!gameStarted) {
+                playerGroup.rotation.y += 0.01; // Menüde karakter dönsün
+                camera.position.set(0, 2, 5);
+                camera.lookAt(0, 1.2, 0);
+                return;
+            }
 
+            const speed = 0.1;
+            let moving = false;
             playerGroup.rotation.y = yaw;
 
-            // Zemin Kontrolü
-            const halfSize = mapSize / 2;
-            const isInsideMap = Math.abs(playerGroup.position.x) < halfSize && Math.abs(playerGroup.position.z) < halfSize;
+            if (keys['KeyW']) { playerGroup.translateZ(-speed); moving = true; }
+            if (keys['KeyS']) { playerGroup.translateZ(speed); moving = true; }
+            if (keys['KeyA']) { playerGroup.translateX(-speed); moving = true; }
+            if (keys['KeyD']) { playerGroup.translateX(speed); moving = true; }
 
-            if (isInsideMap && playerGroup.position.y <= 0) {
-                // Zemindeyiz
-                playerGroup.position.y = 0;
-                velocityY = 0;
-                
-                if (keys['KeyW']) { playerGroup.translateZ(-speed); moving = true; }
-                if (keys['KeyS']) { playerGroup.translateZ(speed); moving = true; }
-                if (keys['KeyA']) { playerGroup.translateX(-speed); moving = true; }
-                if (keys['KeyD']) { playerGroup.translateX(speed); moving = true; }
-            } else {
-                // Boşluktayız
-                velocityY -= gravity;
-                playerGroup.position.y += velocityY;
-            }
-
-            // Yeniden Doğma (Respawn)
-            if (playerGroup.position.y < -30) {
-                playerGroup.position.set(0, 5, 0); // Havadan doğsun ki düşüşü gör
-                velocityY = 0;
-            }
-
-            // Animasyon
             if (moving) {
                 walkTimer += 0.12;
                 leftLeg.rotation.x = Math.sin(walkTimer) * 0.5;
@@ -133,7 +177,6 @@
                 leftLeg.rotation.x = 0; rightLeg.rotation.x = 0;
             }
 
-            // Kamera
             const camDist = 7;
             camera.position.set(
                 playerGroup.position.x + Math.sin(yaw) * Math.cos(pitch) * camDist,
