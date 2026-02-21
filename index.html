@@ -7,22 +7,24 @@
 </head>
 <body>
     <div id="ui-wrapper">
-        <div class="top-right clickable"><button onclick="toggleLang()">TR / EN</button></div>
+        <div class="top-right clickable">
+            <button onclick="window.toggleLang()">TR / EN</button>
+        </div>
         <div class="bottom-left clickable">
             <h1 id="main-title">3D DENEME OYUNU</h1>
-            <button id="start-btn" onclick="startGame()">MAÇA BAŞLA</button>
+            <button id="start-btn" onclick="window.startGame()">MAÇA BAŞLA</button>
         </div>
         <div class="mid-right clickable">
             <p id="char-text">Karakter Seç</p>
-            <button class="char-btn blue" onclick="selectChar('blue')">Mavi Karakter</button>
-            <button class="char-btn red" onclick="selectChar('red')">Kırmızı Karakter</button>
+            <button class="char-btn blue" onclick="window.selectChar('blue')">Mavi Karakter</button>
+            <button class="char-btn red" onclick="window.selectChar('red')">Kırmızı Karakter</button>
         </div>
     </div>
 
     <div id="pause-overlay">
         <h2 id="pause-title">OYUN DURDURULDU</h2>
-        <button onclick="startGame()">DEVAM ET</button>
-        <button onclick="location.reload()" style="background:#aa0000">ANA MENÜ</button>
+        <button id="resume-btn" onclick="window.startGame()">DEVAM ET</button>
+        <button id="exit-btn" onclick="location.reload()">ANA MENÜ</button>
     </div>
 
     <div id="crosshair"></div>
