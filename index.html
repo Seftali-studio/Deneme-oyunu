@@ -2,32 +2,28 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>3D Savaş Alanı - Hareket Testi</title>
+    <title>3D Savaş Alanı - Karakter v2</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; }
-        #ui { position: absolute; top: 10px; left: 10px; color: white; font-family: sans-serif; pointer-events: none; text-shadow: 2px 2px 4px #000; }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
+        #ui { position: absolute; top: 10px; left: 10px; color: white; pointer-events: none; text-shadow: 2px 2px 4px #000; }
     </style>
 </head>
 <body>
     <div id="ui">
-        <h1>Karakter Kontrolü Aktif</h1>
-        <p>W, A, S, D ile hareket et | Boşluk (Space) ile zıpla!</p>
+        <h1>Karakter Testi</h1>
+        <p>Sol Tıkla + Sürükle: Etrafa Bak | W,A,S,D: Yürü</p>
     </div>
 
     <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
-            }
-        }
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
     </script>
 
     <script type="module">
         import * as THREE from 'three';
 
-        // --- SAHNE VE KAMERA KURULUMU ---
+        // --- SAHNE VE KAMERA ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87ceeb); // Gökyüzü
+        scene.background = new THREE.Color(0x87ceeb);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -39,73 +35,86 @@
         scene.add(light);
         scene.add(new THREE.AmbientLight(0x404040));
 
-        // --- ZEMİN (PUBG HARİTASI BAŞLANGICI) ---
-        const grid = new THREE.GridHelper(100, 100); // Yolu şaşırmamak için çizgiler ekleyelim
+        // --- ZEMİN ---
+        const grid = new THREE.GridHelper(100, 100);
         scene.add(grid);
-        const floorGeo = new THREE.PlaneGeometry(100, 100);
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x338833 });
-        const floor = new THREE.Mesh(floorGeo, floorMat);
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({ color: 0x338833 }));
         floor.rotation.x = -Math.PI / 2;
         scene.add(floor);
 
-        // --- KARAKTER (BİZİM OYUNCU) ---
-        const playerGeo = new THREE.BoxGeometry(1, 2, 1); // 2 metre boyunda bir karakter
-        const playerMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-        const player = new THREE.Mesh(playerGeo, playerMat);
-        player.position.y = 1; // Ayakları yere değsin
-        scene.add(player);
+        // --- İNSAN MODELİ (GRUP OLARAK) ---
+        const playerGroup = new THREE.Group();
+        
+        // Gövde
+        const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1, 0.4), new THREE.MeshStandardMaterial({color: 0x0000ff}));
+        torso.position.y = 1.5;
+        playerGroup.add(torso);
 
-        // --- HAREKET DEĞİŞKENLERİ ---
+        // Kafa
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), new THREE.MeshStandardMaterial({color: 0xffdbac}));
+        head.position.y = 2.2;
+        playerGroup.add(head);
+
+        // Bacaklar
+        const legGeo = new THREE.BoxGeometry(0.3, 1, 0.3);
+        const legMat = new THREE.MeshStandardMaterial({color: 0x000055});
+        const leftLeg = new THREE.Mesh(legGeo, legMat);
+        leftLeg.position.set(-0.2, 0.5, 0);
+        playerGroup.add(leftLeg);
+        
+        const rightLeg = new THREE.Mesh(legGeo, legMat);
+        rightLeg.position.set(0.2, 0.5, 0);
+        playerGroup.add(rightLeg);
+
+        scene.add(playerGroup);
+
+        // --- KONTROLLER ---
+        let isMouseDown = false;
+        let mouseX = 0, mouseY = 0;
+        let targetRotationY = 0;
         const keys = {};
-        const speed = 0.1;
-        let velocityY = 0; // Zıplama hızı
-        const gravity = 0.01;
 
-        // Tuşlara basılma durumunu takip et
+        document.addEventListener('mousedown', () => isMouseDown = true);
+        document.addEventListener('mouseup', () => isMouseDown = false);
+        document.addEventListener('mousemove', (e) => {
+            if (isMouseDown) {
+                playerGroup.rotation.y -= e.movementX * 0.01;
+            }
+        });
+
         window.addEventListener('keydown', (e) => keys[e.code] = true);
         window.addEventListener('keyup', (e) => keys[e.code] = false);
 
-        function updateMovement() {
-            // W-S (İleri-Geri)
-            if (keys['KeyW']) player.position.z -= speed;
-            if (keys['KeyS']) player.position.z += speed;
-            
-            // A-D (Sağ-Sol)
-            if (keys['KeyA']) player.position.x -= speed;
-            if (keys['KeyD']) player.position.x += speed;
-
-            // Boşluk (Zıplama) - Sadece yerdeyse zıplasın
-            if (keys['Space'] && player.position.y <= 1) {
-                velocityY = 0.2;
+        function update() {
+            const moveSpeed = 0.1;
+            // Karakterin baktığı yöne göre hareket etmesi için:
+            if (keys['KeyW']) {
+                playerGroup.translateZ(-moveSpeed);
+            }
+            if (keys['KeyS']) {
+                playerGroup.translateZ(moveSpeed);
+            }
+            if (keys['KeyA']) {
+                playerGroup.translateX(-moveSpeed);
+            }
+            if (keys['KeyD']) {
+                playerGroup.translateX(moveSpeed);
             }
 
-            // Yerçekimi simülasyonu
-            player.position.y += velocityY;
-            if (player.position.y > 1) {
-                velocityY -= gravity;
-            } else {
-                player.position.y = 1;
-                velocityY = 0;
-            }
-
-            // KAMERA TAKİBİ (Kamerayı karakterin arkasına sabitleyelim)
-            camera.position.set(player.position.x, player.position.y + 3, player.position.z + 7);
-            camera.lookAt(player.position);
+            // Kamera takibi (Karakterin arkasından bakış)
+            const relativeCameraOffset = new THREE.Vector3(0, 3, 5);
+            const cameraOffset = relativeCameraOffset.applyMatrix4(playerGroup.matrixWorld);
+            camera.position.x = cameraOffset.x;
+            camera.position.y = cameraOffset.y;
+            camera.position.z = cameraOffset.z;
+            camera.lookAt(playerGroup.position.x, playerGroup.position.y + 1.5, playerGroup.position.z);
         }
 
-        // --- ANİMASYON DÖNGÜSÜ ---
         function animate() {
             requestAnimationFrame(animate);
-            updateMovement();
+            update();
             renderer.render(scene, camera);
         }
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
         animate();
     </script>
 </body>
