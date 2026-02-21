@@ -4,58 +4,55 @@
     <meta charset="UTF-8">
     <title>3D deneme oyunu</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; }
-        
-        /* MENÜ KATMANLARI */
-        #ui-overlay {
-            position: absolute; width: 100%; height: 100%; z-index: 10;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            background: rgba(0,0,0,0.7); color: white;
+        body { margin: 0; overflow: hidden; background-color: #111; font-family: sans-serif; }
+        #ui-layer {
+            position: absolute; width: 100%; height: 100%; z-index: 100;
+            display: flex; justify-content: center; align-items: center;
+            background: rgba(0,0,0,0.85);
         }
-
-        .menu-box { background: rgba(20,20,20,0.9); padding: 40px; border-radius: 20px; border: 2px solid #ffcc00; text-align: center; min-width: 350px; }
-        
+        .menu-box { 
+            background: #222; padding: 40px; border-radius: 20px; 
+            border: 3px solid #ffcc00; text-align: center; color: white; min-width: 350px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        }
         button { 
-            padding: 15px 30px; font-size: 18px; font-weight: bold; cursor: pointer; 
-            border: none; border-radius: 10px; transition: 0.3s; margin: 10px; width: 80%;
+            padding: 15px; margin: 8px; width: 100%; font-size: 16px; font-weight: bold; 
+            cursor: pointer; border-radius: 8px; border: none; transition: 0.2s;
         }
-        .primary-btn { background: #ffcc00; color: #111; }
-        .secondary-btn { background: rgba(255,255,255,0.1); color: white; border: 1px solid #555; }
-        button:hover { transform: scale(1.05); filter: brightness(1.2); }
-
+        .btn-main { background: #ffcc00; color: #000; }
+        .btn-side { background: #444; color: white; }
+        button:hover { transform: scale(1.03); filter: brightness(1.2); }
         #crosshair { 
-            position: absolute; top: 50%; left: 50%; width: 15px; height: 15px; 
-            border: 2px solid rgba(255,255,255,0.8); border-radius: 50%; 
-            transform: translate(-50%, -50%); display: none; pointer-events: none;
+            position: absolute; top: 50%; left: 50%; width: 10px; height: 10px; 
+            border: 2px solid white; border-radius: 50%; transform: translate(-50%, -50%);
+            display: none; pointer-events: none; z-index: 50;
         }
     </style>
 </head>
 <body>
 
-    <div id="ui-overlay">
-        <div class="menu-box" id="main-container">
-            <h1 id="title-text">3D DENEME OYUNU</h1>
+    <div id="ui-layer">
+        <div class="menu-box">
+            <h1 id="txt-title">3D DENEME OYUNU</h1>
             
-            <div id="start-menu">
-                <p id="char-label">Karakter Seç</p>
-                <div style="display:flex; justify-content:center;">
-                    <button class="secondary-btn" style="width:140px;" onclick="selectChar('blue')">Mavi Karakter</button>
-                    <button class="secondary-btn" style="width:140px;" onclick="selectChar('red')">Kırmızı Karakter</button>
+            <div id="area-main">
+                <p id="txt-select">Karakter Seç</p>
+                <div style="display:flex; gap:5px;">
+                    <button class="btn-side" onclick="selectChar('blue')">Mavi Karakter</button>
+                    <button class="btn-side" onclick="selectChar('red')">Kırmızı Karakter</button>
                 </div>
-                <button class="primary-btn" id="main-start-btn" onclick="startGame()">MAÇA BAŞLA</button>
-                <button class="secondary-btn" onclick="showSubMenu('settings')">Ayarlar</button>
+                <button class="btn-main" id="txt-start" onclick="startGame()">MAÇA BAŞLA</button>
+                <div style="margin-top:10px; border-top: 1px solid #444; padding-top:10px;">
+                    <button class="btn-side" style="width:45%" onclick="setLang('tr')">Türkçe</button>
+                    <button class="btn-side" style="width:45%" onclick="setLang('en')">English</button>
+                </div>
             </div>
 
-            <div id="pause-menu" style="display:none;">
-                <button class="primary-btn" onclick="startGame()">OYUNA DEVAM ET</button>
-                <button class="secondary-btn" onclick="location.reload()">ANA MENÜYE DÖN</button>
-            </div>
-
-            <div id="settings-menu" style="display:none;">
-                <h3>Dil Seçeneği</h3>
-                <button class="secondary-btn" onclick="setLang('tr')">Türkçe</button>
-                <button class="secondary-btn" onclick="setLang('en')">English</button>
-                <button class="primary-btn" style="background:#ff4444" onclick="showSubMenu('main')">Geri</button>
+            <div id="area-pause" style="display:none;">
+                <button class="btn-main" id="txt-resume" onclick="startGame()">DEVAM ET</button>
+                <button class="btn-side" onclick="setLang('tr')">Türkçe</button>
+                <button class="btn-side" onclick="setLang('en')">English</button>
+                <button class="btn-side" style="background:#800" onclick="location.reload()">MENÜYE DÖN</button>
             </div>
         </div>
     </div>
@@ -69,14 +66,14 @@
     <script type="module">
         import * as THREE from 'three';
 
+        let gameStarted = false;
         let isPaused = true;
         let lang = 'tr';
         const texts = {
-            tr: { title: "3D DENEME OYUNU", start: "MAÇA BAŞLA", resume: "OYUNA DEVAM ET", char: "Karakter Seç", settings: "Ayarlar", back: "Geri" },
-            en: { title: "3D TRIAL GAME", start: "START MATCH", resume: "CONTINUE", char: "Select Character", settings: "Settings", back: "Back" }
+            tr: { title: "3D DENEME OYUNU", start: "MAÇA BAŞLA", select: "Karakter Seç", resume: "DEVAM ET" },
+            en: { title: "3D TRIAL GAME", start: "START MATCH", select: "Select Hero", resume: "CONTINUE" }
         };
 
-        // --- SAHNE KURULUMU ---
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87ceeb);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -84,136 +81,143 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        const light = new THREE.DirectionalLight(0xffffff, 1.2);
-        light.position.set(10, 20, 10);
-        scene.add(light);
-        scene.add(new THREE.AmbientLight(0x606060));
+        // IŞIKLAR
+        const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+        sun.position.set(5, 15, 10);
+        scene.add(sun);
+        scene.add(new THREE.AmbientLight(0x707070));
 
-        // ZEMİN
-        const floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({ color: 0x2d5a27 }));
+        // ZEMİN (Doku garantili)
+        const floorGeo = new THREE.PlaneGeometry(100, 100);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x2d5a27 }); // Düz yeşil (önlem)
+        const floor = new THREE.Mesh(floorGeo, floorMat);
         floor.rotation.x = -Math.PI / 2;
         scene.add(floor);
 
-        // --- DAHA GERÇEKÇİ KARAKTER MODELLEME ---
-        function createAdvancedHuman(color) {
+        // DOKU EKLEME (Opsiyonel, hata verirse sistemi bozmaz)
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128; canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#1a3c15'; ctx.fillRect(0,0,128,128);
+            for(let i=0; i<500; i++){
+                ctx.fillStyle = '#2d5a27'; ctx.fillRect(Math.random()*128, Math.random()*128, 2, 2);
+            }
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(20,20);
+            floorMat.map = tex;
+        } catch(e) { console.log("Doku yüklenemedi, düz renk devam ediyor."); }
+
+        // KARAKTER
+        function createModel(colorCode) {
             const group = new THREE.Group();
-            const mat = new THREE.MeshStandardMaterial({color: color});
-            const skinMat = new THREE.MeshStandardMaterial({color: 0xffdbac});
-
-            // Gövde (V şeklinde)
-            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.3), mat);
-            torso.position.y = 1.35; group.add(torso);
-
-            // Kafa
-            const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.35), skinMat);
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.3), new THREE.MeshStandardMaterial({color: colorCode}));
+            body.position.y = 1.35; group.add(body);
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.35), new THREE.MeshStandardMaterial({color: 0xffdbac}));
             head.position.y = 2.05; group.add(head);
-
-            // Kollar (Eklem detaylı görünümlü)
-            const armGeo = new THREE.BoxGeometry(0.2, 0.8, 0.2);
-            const lArm = new THREE.Mesh(armGeo, mat); lArm.position.set(-0.45, 1.35, 0); group.add(lArm);
-            const rArm = new THREE.Mesh(armGeo, mat); rArm.position.set(0.45, 1.35, 0); group.add(rArm);
-
-            // Bacaklar
-            const legGeo = new THREE.BoxGeometry(0.25, 0.9, 0.25);
-            const lLeg = new THREE.Mesh(legGeo, new THREE.MeshStandardMaterial({color: 0x222222}));
-            lLeg.position.set(-0.18, 0.45, 0); group.add(lLeg);
-            const rLeg = new THREE.Mesh(legGeo, new THREE.MeshStandardMaterial({color: 0x111111}));
-            rLeg.position.set(0.18, 0.45, 0); group.add(rLeg);
-
-            group.userData = { lLeg, rLeg, lArm, rArm };
+            const leg = new THREE.BoxGeometry(0.25, 0.8, 0.25);
+            const lLeg = new THREE.Mesh(leg, new THREE.MeshStandardMaterial({color: 0x222222}));
+            lLeg.position.set(-0.15, 0.4, 0); group.add(lLeg);
+            const rLeg = new THREE.Mesh(leg, new THREE.MeshStandardMaterial({color: 0x222222}));
+            rLeg.position.set(0.15, 0.4, 0); group.add(rLeg);
+            group.userData = { lLeg, rLeg };
             return group;
         }
 
-        let player = createAdvancedHuman(0x0066ff);
+        let player = createModel(0x0066ff);
         scene.add(player);
 
-        // --- GLOBAL FONKSİYONLAR ---
-        window.selectChar = (color) => {
-            scene.remove(player);
-            player = createAdvancedHuman(color === 'blue' ? 0x0066ff : 0xff3300);
-            scene.add(player);
-        };
-
-        window.showSubMenu = (menu) => {
-            document.getElementById('start-menu').style.display = menu === 'main' ? 'block' : 'none';
-            document.getElementById('settings-menu').style.display = menu === 'settings' ? 'block' : 'none';
-            document.getElementById('pause-menu').style.display = 'none';
-        };
-
+        // --- BUTON FONKSİYONLARI ---
         window.setLang = (l) => {
             lang = l;
-            document.getElementById('title-text').innerText = texts[l].title;
-            document.getElementById('main-start-btn').innerText = texts[l].start;
-            document.getElementById('char-label').innerText = texts[l].char;
-            showSubMenu('main');
+            document.getElementById('txt-title').innerText = texts[l].title;
+            document.getElementById('txt-start').innerText = texts[l].start;
+            document.getElementById('txt-select').innerText = texts[l].select;
+            document.getElementById('txt-resume').innerText = texts[l].resume;
+        };
+
+        window.selectChar = (c) => {
+            player.children[0].material.color.set(c === 'blue' ? 0x0066ff : 0xff3300);
         };
 
         window.startGame = () => {
             isPaused = false;
-            document.getElementById('ui-overlay').style.display = 'none';
+            gameStarted = true;
+            document.getElementById('ui-layer').style.display = 'none';
             document.getElementById('crosshair').style.display = 'block';
         };
 
-        // ESC İLE MENÜYÜ AÇMA
+        const keys = {};
         window.addEventListener('keydown', (e) => {
-            if (e.code === 'Escape') {
+            if(e.code === 'Escape' && gameStarted) {
                 isPaused = true;
-                document.getElementById('ui-overlay').style.display = 'flex';
-                document.getElementById('start-menu').style.display = 'none';
-                document.getElementById('pause-menu').style.display = 'block';
-                document.getElementById('settings-menu').style.display = 'none';
+                document.getElementById('ui-layer').style.display = 'flex';
+                document.getElementById('area-main').style.display = 'none';
+                document.getElementById('area-pause').style.display = 'block';
                 document.getElementById('crosshair').style.display = 'none';
             }
             keys[e.code] = true;
         });
-
-        const keys = {};
         window.addEventListener('keyup', (e) => keys[e.code] = false);
 
-        let yaw = 0, pitch = 0, walkTime = 0;
+        let yaw = 0, pitch = 0, vY = 0, walk = 0;
         document.addEventListener('mousemove', (e) => {
-            if(!isPaused && e.buttons === 1) {
+            if(!isPaused && (e.buttons === 1 || document.pointerLockElement)) {
                 yaw -= e.movementX * 0.005;
-                pitch = Math.max(-0.8, Math.min(0.2, pitch - e.movementY * 0.005));
+                pitch = Math.max(-0.6, Math.min(0.2, pitch - e.movementY * 0.005));
             }
         });
 
         function update() {
             if (isPaused) {
                 player.rotation.y += 0.01;
-                camera.position.set(0, 2.5, 5);
+                camera.position.set(Math.sin(Date.now()*0.001)*2, 2.5, 6);
                 camera.lookAt(0, 1.5, 0);
-                return;
-            }
-
-            player.rotation.y = yaw;
-            let moving = false;
-            if (keys['KeyW']) { player.translateZ(-0.1); moving = true; }
-            if (keys['KeyS']) { player.translateZ(0.1); moving = true; }
-
-            // Animasyon (Kol ve bacak sallanması)
-            if(moving) {
-                walkTime += 0.15;
-                player.userData.lLeg.rotation.x = Math.sin(walkTime) * 0.6;
-                player.userData.rLeg.rotation.x = -Math.sin(walkTime) * 0.6;
-                player.userData.lArm.rotation.x = -Math.sin(walkTime) * 0.4;
-                player.userData.rArm.rotation.x = Math.sin(walkTime) * 0.4;
             } else {
-                player.userData.lLeg.rotation.x = 0;
-                player.userData.rLeg.rotation.x = 0;
-            }
+                player.rotation.y = yaw;
+                let move = false;
+                const dist = 50;
+                const inside = Math.abs(player.position.x) < dist && Math.abs(player.position.z) < dist;
 
-            const camDist = 6;
-            camera.position.set(
-                player.position.x + Math.sin(yaw) * Math.cos(pitch) * camDist,
-                player.position.y + 3.5 + Math.sin(pitch) * camDist,
-                player.position.z + Math.cos(yaw) * Math.cos(pitch) * camDist
-            );
-            camera.lookAt(player.position.x, player.position.y + 1.5, player.position.z);
+                if (inside && player.position.y <= 0) {
+                    player.position.y = 0; vY = 0;
+                    if(keys['KeyW']) { player.translateZ(-0.12); move = true; }
+                    if(keys['KeyS']) { player.translateZ(0.12); move = true; }
+                    if(keys['KeyA']) { player.translateX(-0.12); move = true; }
+                    if(keys['KeyD']) { player.translateX(0.12); move = true; }
+                } else {
+                    vY -= 0.015;
+                    player.position.y += vY;
+                    if(player.position.y < -30) { player.position.set(0,5,0); vY = 0; }
+                }
+
+                if(move) {
+                    walk += 0.15;
+                    player.userData.lLeg.rotation.x = Math.sin(walk)*0.5;
+                    player.userData.rLeg.rotation.x = Math.sin(walk+Math.PI)*0.5;
+                } else {
+                    player.userData.lLeg.rotation.x = player.userData.rLeg.rotation.x = 0;
+                }
+
+                const d = 7;
+                camera.position.set(
+                    player.position.x + Math.sin(yaw)*Math.cos(pitch)*d,
+                    player.position.y + 3.5 + Math.sin(pitch)*d,
+                    player.position.z + Math.cos(yaw)*Math.cos(pitch)*d
+                );
+                camera.lookAt(player.position.x, player.position.y + 1.5, player.position.z);
+            }
         }
 
         function animate() { requestAnimationFrame(animate); update(); renderer.render(scene, camera); }
         animate();
+        
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
     </script>
 </body>
 </html>
