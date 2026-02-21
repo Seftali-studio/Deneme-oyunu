@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>İlk Oyunum - GitHub</title>
+    <style>
+        body { background-color: #222; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        canvas { background: #eee; border: 5px solid #0095DD; display: block; }
+    </style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="480" height="320"></canvas>
+
+<script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Top ayarları
+    let x = canvas.width / 2;
+    let y = canvas.height - 30;
+    let dx = 2;
+    let dy = -2;
+    const ballRadius = 10;
+
+    // Raket ayarları
+    const paddleHeight = 10;
+    const paddleWidth = 75;
+    let paddleX = (canvas.width - paddleWidth) / 2;
+
+    // Fare hareketini dinle
+    document.addEventListener("mousemove", mouseMoveHandler, false);
+
+    function mouseMoveHandler(e) {
+        const relativeX = e.clientX - canvas.offsetLeft;
+        if(relativeX > 0 && relativeX < canvas.width) {
+            paddleX = relativeX - paddleWidth / 2;
+        }
+    }
+
+    function drawBall() {
+        ctx.beginPath();
+        ctx.arc(x, y, ballRadius, 0, Math.PI*2);
+        ctx.fillStyle = "#0095DD";
+        ctx.fill();
+        ctx.closePath();
+    }
+
+    function drawPaddle() {
+        ctx.beginPath();
+        ctx.rect(paddleX, canvas.height - paddleHeight, paddleWidth, paddleHeight);
+        ctx.fillStyle = "#0095DD";
+        ctx.fill();
+        ctx.closePath();
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawBall();
+        drawPaddle();
+
+        // Kenarlara çarpma kontrolü
+        if(x + dx > canvas.width - ballRadius || x + dx < ballRadius) {
+            dx = -dx;
+        }
+        if(y + dy < ballRadius) {
+            dy = -dy;
+        } else if(y + dy > canvas.height - ballRadius) {
+            // Rakete çarptı mı?
+            if(x > paddleX && x < paddleX + paddleWidth) {
+                dy = -dy;
+                // Her vuruşta biraz hızlandıralım
+                dx *= 1.1; 
+                dy *= 1.1;
+            }
+            else {
+                alert("OYUN BİTTİ! Sayfayı yenileyerek tekrar dene.");
+                document.location.reload();
+                clearInterval(interval);
+            }
+        }
+
+        x += dx;
+        y += dy;
+    }
+
+    const interval = setInterval(draw, 10);
+</script>
+
+</body>
+</html>
