@@ -4,64 +4,63 @@
     <meta charset="UTF-8">
     <title>3D deneme oyunu</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; }
         
-        /* ANA MENÜ */
-        #main-menu {
+        /* MENÜ KATMANLARI */
+        #ui-overlay {
             position: absolute; width: 100%; height: 100%; z-index: 10;
-            display: flex; flex-direction: column; justify-content: space-between;
-            background: radial-gradient(circle, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.8) 100%);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background: rgba(0,0,0,0.7); color: white;
         }
 
-        .menu-top { display: flex; justify-content: space-between; padding: 20px; }
-        .menu-bottom { display: flex; justify-content: center; padding: 50px; }
+        .menu-box { background: rgba(20,20,20,0.9); padding: 40px; border-radius: 20px; border: 2px solid #ffcc00; text-align: center; min-width: 350px; }
         
-        button { padding: 12px 25px; font-size: 18px; font-weight: bold; cursor: pointer; border: none; border-radius: 8px; transition: 0.2s; }
-        #start-btn { background: #ffcc00; color: #333; font-size: 30px; padding: 20px 60px; box-shadow: 0 4px 10px rgba(255,204,0,0.5); }
-        #start-btn:hover { transform: scale(1.05); }
-
-        .side-btn { background: rgba(255,255,255,0.2); color: white; margin: 5px; }
-        
-        /* AYARLAR PANELİ */
-        #settings-panel {
-            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.9); padding: 30px; border-radius: 15px; border: 2px solid #555; text-align: center; color: white;
+        button { 
+            padding: 15px 30px; font-size: 18px; font-weight: bold; cursor: pointer; 
+            border: none; border-radius: 10px; transition: 0.3s; margin: 10px; width: 80%;
         }
+        .primary-btn { background: #ffcc00; color: #111; }
+        .secondary-btn { background: rgba(255,255,255,0.1); color: white; border: 1px solid #555; }
+        button:hover { transform: scale(1.05); filter: brightness(1.2); }
 
-        .char-selector { position: absolute; left: 30px; top: 50%; transform: translateY(-50%); }
-
-        #ui-game { position: absolute; top: 10px; left: 10px; color: white; display: none; pointer-events: none; }
+        #crosshair { 
+            position: absolute; top: 50%; left: 50%; width: 15px; height: 15px; 
+            border: 2px solid rgba(255,255,255,0.8); border-radius: 50%; 
+            transform: translate(-50%, -50%); display: none; pointer-events: none;
+        }
     </style>
 </head>
 <body>
 
-    <div id="main-menu">
-        <div class="menu-top">
-            <button class="side-btn" id="sett-btn-label" onclick="toggleSettings(true)">Ayarlar</button>
-            <h2 id="title-label" style="color: white; margin: 0;">3D DENEME OYUNU</h2>
-        </div>
-
-        <div class="char-selector">
-            <h3 id="select-label" style="color: white;">Karakter Seç</h3>
-            <button class="side-btn" style="border-left: 5px solid #0066ff" onclick="selectChar('blue')">Mavi Savaşçı</button><br>
-            <button class="side-btn" style="border-left: 5px solid #ff3300" onclick="selectChar('red')">Kırmızı Savaşçı</button>
-        </div>
-
-        <div id="settings-panel">
-            <h2 id="lang-title">Dil Seçimi / Language</h2>
-            <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 20px;">
-                <button class="side-btn" onclick="setLang('tr')">Türkçe</button>
-                <button class="side-btn" onclick="setLang('en')">English</button>
+    <div id="ui-overlay">
+        <div class="menu-box" id="main-container">
+            <h1 id="title-text">3D DENEME OYUNU</h1>
+            
+            <div id="start-menu">
+                <p id="char-label">Karakter Seç</p>
+                <div style="display:flex; justify-content:center;">
+                    <button class="secondary-btn" style="width:140px;" onclick="selectChar('blue')">Mavi Karakter</button>
+                    <button class="secondary-btn" style="width:140px;" onclick="selectChar('red')">Kırmızı Karakter</button>
+                </div>
+                <button class="primary-btn" id="main-start-btn" onclick="startGame()">MAÇA BAŞLA</button>
+                <button class="secondary-btn" onclick="showSubMenu('settings')">Ayarlar</button>
             </div>
-            <button onclick="toggleSettings(false)" style="background: #ff4444; color: white;">Kapat / Close</button>
-        </div>
 
-        <div class="menu-bottom">
-            <button id="start-btn" onclick="startGame()">MAÇA BAŞLA</button>
+            <div id="pause-menu" style="display:none;">
+                <button class="primary-btn" onclick="startGame()">OYUNA DEVAM ET</button>
+                <button class="secondary-btn" onclick="location.reload()">ANA MENÜYE DÖN</button>
+            </div>
+
+            <div id="settings-menu" style="display:none;">
+                <h3>Dil Seçeneği</h3>
+                <button class="secondary-btn" onclick="setLang('tr')">Türkçe</button>
+                <button class="secondary-btn" onclick="setLang('en')">English</button>
+                <button class="primary-btn" style="background:#ff4444" onclick="showSubMenu('main')">Geri</button>
+            </div>
         </div>
     </div>
 
-    <div id="ui-game"><p id="ingame-label">W,A,S,D ile hareket et!</p></div>
+    <div id="crosshair"></div>
 
     <script type="importmap">
         { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
@@ -70,13 +69,14 @@
     <script type="module">
         import * as THREE from 'three';
 
-        let gameStarted = false;
-        let currentLang = 'tr';
+        let isPaused = true;
+        let lang = 'tr';
         const texts = {
-            tr: { start: "MAÇA BAŞLA", select: "Karakter Seç", sett: "Ayarlar", ingame: "W,A,S,D ile hareket et!", title: "3D DENEME OYUNU" },
-            en: { start: "START MATCH", select: "Select Hero", sett: "Settings", ingame: "Use W,A,S,D to move!", title: "3D TRIAL GAME" }
+            tr: { title: "3D DENEME OYUNU", start: "MAÇA BAŞLA", resume: "OYUNA DEVAM ET", char: "Karakter Seç", settings: "Ayarlar", back: "Geri" },
+            en: { title: "3D TRIAL GAME", start: "START MATCH", resume: "CONTINUE", char: "Select Character", settings: "Settings", back: "Back" }
         };
 
+        // --- SAHNE KURULUMU ---
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87ceeb);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -84,119 +84,132 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // --- ÇİMEN DOKUSU ---
-        function createGrass() {
-            const canvas = document.createElement('canvas');
-            canvas.width = 512; canvas.height = 512;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#1a3c15'; ctx.fillRect(0,0,512,512);
-            for(let i=0; i<15000; i++) {
-                ctx.fillStyle = `rgb(10, ${60+Math.random()*80}, 10)`;
-                ctx.fillRect(Math.random()*512, Math.random()*512, 2, 4);
-            }
-            const tex = new THREE.CanvasTexture(canvas);
-            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-            tex.repeat.set(20,20);
-            return tex;
-        }
-
         const light = new THREE.DirectionalLight(0xffffff, 1.2);
         light.position.set(10, 20, 10);
         scene.add(light);
         scene.add(new THREE.AmbientLight(0x606060));
 
         // ZEMİN
-        const floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({ map: createGrass() }));
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({ color: 0x2d5a27 }));
         floor.rotation.x = -Math.PI / 2;
         scene.add(floor);
 
-        // KARAKTER
-        const playerGroup = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.3), new THREE.MeshStandardMaterial({color: 0x0066ff}));
-        body.position.y = 1.2; playerGroup.add(body);
-        const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.35), new THREE.MeshStandardMaterial({color: 0xffdbac}));
-        head.position.y = 1.8; playerGroup.add(head);
-        const legGeo = new THREE.BoxGeometry(0.25, 0.8, 0.25);
-        const leftLeg = new THREE.Mesh(legGeo, new THREE.MeshStandardMaterial({color: 0x222222}));
-        leftLeg.position.set(-0.15, 0.4, 0); playerGroup.add(leftLeg);
-        const rightLeg = new THREE.Mesh(legGeo, new THREE.MeshStandardMaterial({color: 0x222222}));
-        rightLeg.position.set(0.15, 0.4, 0); playerGroup.add(rightLeg);
-        scene.add(playerGroup);
+        // --- DAHA GERÇEKÇİ KARAKTER MODELLEME ---
+        function createAdvancedHuman(color) {
+            const group = new THREE.Group();
+            const mat = new THREE.MeshStandardMaterial({color: color});
+            const skinMat = new THREE.MeshStandardMaterial({color: 0xffdbac});
 
-        const keys = {};
-        let pitch = 0, yaw = 0, walkTimer = 0, vY = 0;
+            // Gövde (V şeklinde)
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.3), mat);
+            torso.position.y = 1.35; group.add(torso);
 
-        // --- ARAYÜZ FONKSİYONLARI ---
-        window.toggleSettings = (show) => { document.getElementById('settings-panel').style.display = show ? 'block' : 'none'; };
-        
-        window.setLang = (l) => {
-            currentLang = l;
-            document.getElementById('start-btn').innerText = texts[l].start;
-            document.getElementById('select-label').innerText = texts[l].select;
-            document.getElementById('sett-btn-label').innerText = texts[l].sett;
-            document.getElementById('ingame-label').innerText = texts[l].ingame;
-            document.getElementById('title-label').innerText = texts[l].title;
-            toggleSettings(false);
+            // Kafa
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.35), skinMat);
+            head.position.y = 2.05; group.add(head);
+
+            // Kollar (Eklem detaylı görünümlü)
+            const armGeo = new THREE.BoxGeometry(0.2, 0.8, 0.2);
+            const lArm = new THREE.Mesh(armGeo, mat); lArm.position.set(-0.45, 1.35, 0); group.add(lArm);
+            const rArm = new THREE.Mesh(armGeo, mat); rArm.position.set(0.45, 1.35, 0); group.add(rArm);
+
+            // Bacaklar
+            const legGeo = new THREE.BoxGeometry(0.25, 0.9, 0.25);
+            const lLeg = new THREE.Mesh(legGeo, new THREE.MeshStandardMaterial({color: 0x222222}));
+            lLeg.position.set(-0.18, 0.45, 0); group.add(lLeg);
+            const rLeg = new THREE.Mesh(legGeo, new THREE.MeshStandardMaterial({color: 0x111111}));
+            rLeg.position.set(0.18, 0.45, 0); group.add(rLeg);
+
+            group.userData = { lLeg, rLeg, lArm, rArm };
+            return group;
+        }
+
+        let player = createAdvancedHuman(0x0066ff);
+        scene.add(player);
+
+        // --- GLOBAL FONKSİYONLAR ---
+        window.selectChar = (color) => {
+            scene.remove(player);
+            player = createAdvancedHuman(color === 'blue' ? 0x0066ff : 0xff3300);
+            scene.add(player);
         };
 
-        window.selectChar = (c) => { body.material.color.set(c === 'blue' ? 0x0066ff : 0xff3300); };
+        window.showSubMenu = (menu) => {
+            document.getElementById('start-menu').style.display = menu === 'main' ? 'block' : 'none';
+            document.getElementById('settings-menu').style.display = menu === 'settings' ? 'block' : 'none';
+            document.getElementById('pause-menu').style.display = 'none';
+        };
+
+        window.setLang = (l) => {
+            lang = l;
+            document.getElementById('title-text').innerText = texts[l].title;
+            document.getElementById('main-start-btn').innerText = texts[l].start;
+            document.getElementById('char-label').innerText = texts[l].char;
+            showSubMenu('main');
+        };
 
         window.startGame = () => {
-            gameStarted = true;
-            document.getElementById('main-menu').style.display = 'none';
-            document.getElementById('ui-game').style.display = 'block';
+            isPaused = false;
+            document.getElementById('ui-overlay').style.display = 'none';
+            document.getElementById('crosshair').style.display = 'block';
         };
 
-        document.addEventListener('keydown', (e) => keys[e.code] = true);
-        document.addEventListener('keyup', (e) => keys[e.code] = false);
+        // ESC İLE MENÜYÜ AÇMA
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Escape') {
+                isPaused = true;
+                document.getElementById('ui-overlay').style.display = 'flex';
+                document.getElementById('start-menu').style.display = 'none';
+                document.getElementById('pause-menu').style.display = 'block';
+                document.getElementById('settings-menu').style.display = 'none';
+                document.getElementById('crosshair').style.display = 'none';
+            }
+            keys[e.code] = true;
+        });
+
+        const keys = {};
+        window.addEventListener('keyup', (e) => keys[e.code] = false);
+
+        let yaw = 0, pitch = 0, walkTime = 0;
         document.addEventListener('mousemove', (e) => {
-            if (gameStarted && e.buttons === 1) {
+            if(!isPaused && e.buttons === 1) {
                 yaw -= e.movementX * 0.005;
-                pitch -= e.movementY * 0.005;
-                pitch = Math.max(-Math.PI/3, Math.min(Math.PI/8, pitch));
+                pitch = Math.max(-0.8, Math.min(0.2, pitch - e.movementY * 0.005));
             }
         });
 
         function update() {
-            if (!gameStarted) {
-                playerGroup.rotation.y += 0.01;
-                camera.position.set(0, 2, 5);
-                camera.lookAt(0, 1.2, 0);
+            if (isPaused) {
+                player.rotation.y += 0.01;
+                camera.position.set(0, 2.5, 5);
+                camera.lookAt(0, 1.5, 0);
                 return;
             }
 
-            const speed = 0.1;
+            player.rotation.y = yaw;
             let moving = false;
-            playerGroup.rotation.y = yaw;
+            if (keys['KeyW']) { player.translateZ(-0.1); moving = true; }
+            if (keys['KeyS']) { player.translateZ(0.1); moving = true; }
 
-            const isInside = Math.abs(playerGroup.position.x) < 50 && Math.abs(playerGroup.position.z) < 50;
-
-            if (isInside && playerGroup.position.y <= 0) {
-                playerGroup.position.y = 0; vY = 0;
-                if (keys['KeyW']) { playerGroup.translateZ(-speed); moving = true; }
-                if (keys['KeyS']) { playerGroup.translateZ(speed); moving = true; }
-                if (keys['KeyA']) { playerGroup.translateX(-speed); moving = true; }
-                if (keys['KeyD']) { playerGroup.translateX(speed); moving = true; }
+            // Animasyon (Kol ve bacak sallanması)
+            if(moving) {
+                walkTime += 0.15;
+                player.userData.lLeg.rotation.x = Math.sin(walkTime) * 0.6;
+                player.userData.rLeg.rotation.x = -Math.sin(walkTime) * 0.6;
+                player.userData.lArm.rotation.x = -Math.sin(walkTime) * 0.4;
+                player.userData.rArm.rotation.x = Math.sin(walkTime) * 0.4;
             } else {
-                vY -= 0.015;
-                playerGroup.position.y += vY;
+                player.userData.lLeg.rotation.x = 0;
+                player.userData.rLeg.rotation.x = 0;
             }
 
-            if (playerGroup.position.y < -30) { playerGroup.position.set(0, 5, 0); vY = 0; }
-
-            if (moving) {
-                walkTimer += 0.12;
-                leftLeg.rotation.x = Math.sin(walkTimer)*0.5;
-                rightLeg.rotation.x = Math.sin(walkTimer+Math.PI)*0.5;
-            } else { leftLeg.rotation.x = rightLeg.rotation.x = 0; }
-
-            const d = 7;
+            const camDist = 6;
             camera.position.set(
-                playerGroup.position.x + Math.sin(yaw)*Math.cos(pitch)*d,
-                playerGroup.position.y + 3.5 + Math.sin(pitch)*d,
-                playerGroup.position.z + Math.cos(yaw)*Math.cos(pitch)*d
+                player.position.x + Math.sin(yaw) * Math.cos(pitch) * camDist,
+                player.position.y + 3.5 + Math.sin(pitch) * camDist,
+                player.position.z + Math.cos(yaw) * Math.cos(pitch) * camDist
             );
-            camera.lookAt(playerGroup.position.x, playerGroup.position.y+1.2, playerGroup.position.z);
+            camera.lookAt(player.position.x, player.position.y + 1.5, player.position.z);
         }
 
         function animate() { requestAnimationFrame(animate); update(); renderer.render(scene, camera); }
