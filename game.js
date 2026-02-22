@@ -1,70 +1,64 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 
-// --- AYARLAR VE DEĞİŞKENLER ---
 let gameStarted = false, isPaused = true, currentLang = 'tr';
 const clock = new THREE.Clock();
-let mixer, playerModel; // Animasyon ve model için
+let mixer, playerModel;
 
 const texts = {
-    tr: { title: "3D DENEME OYUNU", start: "MAÇA BAŞLA", char: "Karakter: Yüklendi", pause: "OYUN DURDURULDU", resume: "DEVAM ET", exit: "ANA MENÜ" },
-    en: { title: "3D TRIAL GAME", start: "START MATCH", char: "Hero: Loaded", pause: "GAME PAUSED", resume: "CONTINUE", exit: "MAIN MENU" }
+    tr: { title: "3D DENEME OYUNU", start: "MAÇA BAŞLA", char: "Karakter Hazır", pause: "OYUN DURDURULDU", resume: "DEVAM ET", exit: "ANA MENÜ" },
+    en: { title: "3D TRIAL GAME", start: "START MATCH", char: "Hero Ready", pause: "GAME PAUSED", resume: "CONTINUE", exit: "MAIN MENU" }
 };
 
-// --- SAHNE VE RENDERER ---
+// --- SAHNE KURULUMU ---
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x6eb1ff);
+scene.background = new THREE.Color(0x87ceeb); // Açık mavi gökyüzü
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
 
-// --- IŞIKLANDIRMA ---
-const sun = new THREE.DirectionalLight(0xffffff, 2);
-sun.position.set(20, 50, 20);
+// --- IŞIKLAR ---
+const sun = new THREE.DirectionalLight(0xffffff, 2.5);
+sun.position.set(10, 50, 10);
 sun.castShadow = true;
-sun.shadow.camera.left = -50; sun.shadow.camera.right = 50;
-sun.shadow.camera.top = 50; sun.shadow.camera.bottom = -50;
 scene.add(sun);
-scene.add(new THREE.AmbientLight(0xaaaaaa));
+scene.add(new THREE.AmbientLight(0xffffff, 0.8));
 
-// --- KALİTELİ ZEMİN VE GÖL ---
-function createRealisticGrass() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512; canvas.height = 512;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#1e3d11'; ctx.fillRect(0,0,512,512);
-    for(let i=0; i<15000; i++) {
-        ctx.fillStyle = `rgb(${10+Math.random()*20}, ${70+Math.random()*80}, 10)`;
-        ctx.fillRect(Math.random()*512, Math.random()*512, 2, 5);
-    }
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(15, 15);
-    return tex;
-}
-const floor = new THREE.Mesh(new THREE.PlaneGeometry(150, 150), new THREE.MeshStandardMaterial({ map: createRealisticGrass() }));
+// --- ZEMİN ---
+const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(200, 200),
+    new THREE.MeshStandardMaterial({ color: 0x348C31 }) // Canlı çimen yeşili
+);
 floor.rotation.x = -Math.PI / 2;
 floor.receiveShadow = true;
 scene.add(floor);
 
-const waterMat = new THREE.MeshStandardMaterial({ color: 0x0044ff, transparent: true, opacity: 0.6, metalness: 0.8 });
-const lake = new THREE.Mesh(new THREE.CircleGeometry(12, 64), waterMat);
-lake.rotation.x = -Math.PI / 2;
-lake.position.set(15, 0.06, 15);
-scene.add(lake);
-
-// --- MODEL YÜKLEME (Sketchfab Modeli) ---
+// --- KARAKTER GRUBU ---
 const playerGroup = new THREE.Group();
+scene.add(playerGroup);
+
+// --- GEÇİCİ KUTU (Model yüklenene kadar görünecek) ---
+const placeholder = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 2, 1),
+    new THREE.MeshStandardMaterial({ color: 0xff0000, wireframe: true })
+);
+placeholder.position.y = 1;
+playerGroup.add(placeholder);
+
+// --- MODEL YÜKLEME ---
 const loader = new GLTFLoader();
 
-// NOT: 'karakter.glb' dosyasının GitHub'da olduğundan emin ol!
+// BURASI ÇOK ÖNEMLİ: Dosya adının GitHub'dakiyle aynı olduğundan emin ol (Örn: karakter.glb)
 loader.load('karakter.glb', (gltf) => {
+    console.log("Model başarıyla geldi!");
+    playerGroup.remove(placeholder); // Model gelince kırmızı kutuyu sil
+    
     playerModel = gltf.scene;
     
-    // Model çok küçükse buradaki 1'leri 5 veya 10 yap!
-    playerModel.scale.set(2, 2, 2); 
+    // MODEL BOYUTU: Eğer hala görünmüyorsa buradaki 5'leri 20 veya 50 yap!
+    playerModel.scale.set(5, 5, 5); 
     
     playerModel.traverse((child) => {
         if (child.isMesh) {
@@ -72,36 +66,19 @@ loader.load('karakter.glb', (gltf) => {
             child.receiveShadow = true;
         }
     });
-
-    playerGroup.add(playerModel);
     
-    // Animasyonları ayarla
-    mixer = new THREE.AnimationMixer(playerModel);
-    if(gltf.animations.length > 0) {
-        mixer.clipAction(gltf.animations[0]).play(); // İlk animasyonu (genelde IDLE) oynat
+    playerGroup.add(playerModel);
+
+    // Animasyon Sistemi
+    if (gltf.animations.length > 0) {
+        mixer = new THREE.AnimationMixer(playerModel);
+        mixer.clipAction(gltf.animations[0]).play();
     }
-}, undefined, (err) => console.error("Model yükleme hatası:", err));
+}, 
+(xhr) => { console.log((xhr.loaded / xhr.total * 100) + '% yüklendi'); },
+(error) => { console.error("Model yüklenirken hata çıktı: ", error); });
 
-scene.add(playerGroup);
-
-// --- AĞAÇLAR ---
-const obstacles = [];
-function createFancyTree(x, z) {
-    const group = new THREE.Group();
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.6, 3), new THREE.MeshStandardMaterial({color: 0x3d2b1f}));
-    trunk.position.y = 1.5; group.add(trunk);
-    const leafMat = new THREE.MeshStandardMaterial({color: 0x134d0b});
-    for(let i=0; i<3; i++) {
-        const leaf = new THREE.Mesh(new THREE.SphereGeometry(1.5 - (i*0.3), 12, 12), leafMat);
-        leaf.position.y = 3 + (i*1.2); group.add(leaf);
-    }
-    group.position.set(x, 0, z);
-    scene.add(group);
-    obstacles.push(new THREE.Box3().setFromObject(group));
-}
-for(let i=0; i<15; i++) createFancyTree(Math.random()*80-40, Math.random()*80-40);
-
-// --- KONTROLLER VE FONKSİYONLAR ---
+// --- FONKSİYONLAR ---
 window.toggleLang = () => {
     currentLang = currentLang === 'tr' ? 'en' : 'tr';
     document.getElementById('main-title').innerText = texts[currentLang].title;
@@ -119,6 +96,9 @@ window.startGame = () => {
     document.getElementById('crosshair').style.display = 'block';
 };
 
+window.selectChar = () => { alert("Model yüklendiği için renk değişimi devre dışı."); };
+
+// --- KONTROLLER ---
 const keys = {};
 let yaw = 0, pitch = 0;
 
@@ -135,47 +115,34 @@ window.addEventListener('keyup', (e) => keys[e.code] = false);
 document.addEventListener('mousemove', (e) => {
     if(!isPaused && (e.buttons === 1 || document.pointerLockElement)) {
         yaw -= e.movementX * 0.005;
-        pitch = Math.max(-0.5, Math.min(0.3, pitch - e.movementY * 0.005));
+        pitch = Math.max(-0.6, Math.min(0.4, pitch - e.movementY * 0.005));
     }
 });
 
-// --- OYUN DÖNGÜSÜ ---
+// --- ANA DÖNGÜ ---
 function update() {
     const delta = clock.getDelta();
-    if (mixer) mixer.update(delta); // Animasyonu güncelle
+    if (mixer) mixer.update(delta);
 
     if (isPaused) {
         playerGroup.rotation.y += 0.01;
-        camera.position.set(0, 3, 7); camera.lookAt(0, 1.5, 0);
+        camera.position.set(0, 4, 12); // Menüde karakteri uzaktan gör
+        camera.lookAt(0, 2, 0);
     } else {
-        const oldPos = playerGroup.position.clone();
         playerGroup.rotation.y = yaw;
-        let speed = 0.18;
-
-        // Su Mekaniği: Gölün içindeysen bat ve yavaşla
-        const distToLake = playerGroup.position.distanceTo(new THREE.Vector3(15, 0, 15));
-        if(distToLake < 12) {
-            speed = 0.07; 
-            playerGroup.position.y = THREE.MathUtils.lerp(playerGroup.position.y, -0.8, 0.1); 
-        } else { 
-            playerGroup.position.y = THREE.MathUtils.lerp(playerGroup.position.y, 0, 0.1); 
-        }
+        let speed = 0.2;
 
         if(keys['KeyW']) playerGroup.translateZ(-speed);
         if(keys['KeyS']) playerGroup.translateZ(speed);
         if(keys['KeyA']) playerGroup.translateX(-speed);
         if(keys['KeyD']) playerGroup.translateX(speed);
 
-        // Çarpışma Testi
-        const pBox = new THREE.Box3().setFromObject(playerGroup);
-        obstacles.forEach(b => { if(pBox.intersectsBox(b)) playerGroup.position.copy(oldPos); });
-
-        // Kamera Takibi (Karakterin arkasından)
-        const d = 10;
+        // Kamera Takibi
+        const dist = 8;
         camera.position.set(
-            playerGroup.position.x + Math.sin(yaw)*Math.cos(pitch)*d,
-            playerGroup.position.y + 5 + Math.sin(pitch)*d,
-            playerGroup.position.z + Math.cos(yaw)*Math.cos(pitch)*d
+            playerGroup.position.x + Math.sin(yaw) * Math.cos(pitch) * dist,
+            playerGroup.position.y + 4 + Math.sin(pitch) * dist,
+            playerGroup.position.z + Math.cos(yaw) * Math.cos(pitch) * dist
         );
         camera.lookAt(playerGroup.position.x, playerGroup.position.y + 2, playerGroup.position.z);
     }
